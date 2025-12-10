@@ -33,7 +33,6 @@ Both Karpenter and GKE Compute Classes are powerful tools for optimizing cluster
 *   Choose **GKE Cloud Compute Classes** when you prioritize a **fully managed, declarative, and simple solution**. It is ideal for teams who want to leverage the power of Spot instances with minimal operational overhead and benefit from deep integration with the Google Cloud ecosystem.
 
 ```
-student_01_c615ee563ec2@cloudshell:~ (qwiklabs-gcp-01-f47f8b310cf5)$ kubectl describe computeclass c3-reliable-fallback
 Name:         c3-reliable-fallback
 Namespace:    
 Labels:       <none>
@@ -70,38 +69,43 @@ Events:                    <none>
 ```
 
 ```
-student_01_c615ee563ec2@cloudshell:~ (qwiklabs-gcp-01-f47f8b310cf5)$ kubectl describe computeclass c3-reliable-fallback
-Name:         c3-reliable-fallback
-Namespace:    
-Labels:       <none>
-Annotations:  <none>
-API Version:  cloud.google.com/v1
-Kind:         ComputeClass
-Metadata:
-  Creation Timestamp:  2025-12-10T21:32:50Z
-  Generation:          1
-  Resource Version:    1765402390051743024
-  UID:                 20dee346-0ae4-4b03-95b2-8d71065b64af
-Spec:
-  Active Migration:
-    Optimize Rule Priority:  true
-  Autoscaling Policy:
-    Consolidation Delay Minutes:  10
-    Consolidation Threshold:      50
-  Node Pool Auto Creation:
-    Enabled:  true
-  Priorities:
-    Machine Family:    c3
-    Spot:              true
-    Machine Family:    c3
-    Spot:              false
-  When Unsatisfiable:  DoNotScaleUp
-Status:
-  Conditions:
-    Last Transition Time:  2025-12-10T21:33:10Z
-    Message:               Crd is healthy.
-    Reason:                Health
-    Status:                True
-    Type:                  Health
-Events:                    <none>
+apiVersion: karpenter.sh/v1beta1
+kind: NodePool
+metadata:
+  name: spot-with-od-fallback
+spec:
+  # Do not set replicas. Karpenter will manage the node count.
+  template:
+    metadata:
+      labels:
+        workload-type: "batch-processing"
+    spec:
+      # Define the provisioning requirements
+      requirements:
+        # 1. Prefer Spot, but allow On-Demand as a fallback
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: ["spot", "on-demand"]
+        
+        # 2. Specify allowed instance families
+        - key: karpenter.k8s.aws/instance-family
+          operator: In
+          values: ["c5", "m5", "r5"]
+          
+        - key: "kubernetes.io/arch"
+          operator: In
+          values: ["amd64"]
+
+  # 3. Enable consolidation to actively remove underutilized nodes
+  consolidation:
+    enabled: true
+  
+  # Set TTL for empty nodes to speed up consolidation
+  limits:
+    cpu: "1000"
+    memory: "1000Gi"
+  
+  disruption:
+    consolidationPolicy: "WhenUnderutilized"
+    expireAfter: "72h" # Set a max lifetime for nodes
 ```
