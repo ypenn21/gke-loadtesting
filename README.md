@@ -2,6 +2,29 @@
 
 [L400 labs](https://explore.qwiklabs.com/course_templates/1441196)
 
+custom metrics adapter..
+https://raw.githubusercontent.com/GoogleCloudPlatform/k8s-stackdriver/master/custom-metrics-stackdriver-adapter/deploy/production/adapter_new_resource_model.yaml
+
+GKE Autopilot Clusters:
+
+Yes, the Google Cloud Managed Service for Prometheus (GMP) components (running in the gmp-system namespace) are enabled by default in Autopilot clusters running GKE version 1.25 or greater.
+GKE Standard Clusters:
+
+New Clusters: GMP managed collection is also enabled by default when you create a new GKE Standard cluster.
+Existing Clusters: For Standard clusters created before this default was put in place, GMP is NOT enabled by default, and the gmp-system pods would only exist if you or an administrator manually enabled Managed Service for Prometheus on that cluster.
+So, you will find the gmp-system pods in:
+
+All GKE Autopilot clusters (v1.25+).
+Any GKE Standard cluster created after the default enablement was rolled out.
+Any older GKE Standard cluster where GMP has been manually enabled.
+You will not find them in an older GKE Standard cluster where GMP has not been explicitly enabled.
+
+```
+kubectl get pods -n gmp-system
+kubectl get daemonset -n gmp-system
+kubectl get deployment -n gmp-system
+kubectl get statefulset -n gmp-system
+```
 
 # gke-loadtesting
 This document summarizes the discussion about the `gke-workload-autoscaling` test setup.
